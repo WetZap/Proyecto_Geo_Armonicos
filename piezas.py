@@ -22,9 +22,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
-
 import armonicos as A
+import numpy as np
 
 R = np.radians
 
@@ -40,7 +39,9 @@ class Pieza:
 
     def __add__(self, otra):
         otra = otra if isinstance(otra, Pieza) else constante(otra)
-        return Pieza(lambda th, ph: self(th, ph) + otra(th, ph), f"{self.nombre} + {otra.nombre}")
+        return Pieza(
+            lambda th, ph: self(th, ph) + otra(th, ph), f"{self.nombre} + {otra.nombre}"
+        )
 
     __radd__ = __add__
 
@@ -55,7 +56,9 @@ class Pieza:
 
     def __mul__(self, k):
         if isinstance(k, Pieza):
-            return Pieza(lambda th, ph: self(th, ph) * k(th, ph), f"({self.nombre})·({k.nombre})")
+            return Pieza(
+                lambda th, ph: self(th, ph) * k(th, ph), f"({self.nombre})·({k.nombre})"
+            )
         return Pieza(lambda th, ph: k * self(th, ph), f"{k}·{self.nombre}")
 
     __rmul__ = __mul__
@@ -76,9 +79,14 @@ def bulto(lat, lon=0.0, ancho=30.0, punta=False):
     """exp(-γ²/2σ²); con punta=True, exp(-γ/σ), que tiene un máximo anguloso."""
     s = R(ancho)
     if punta:
-        return Pieza(lambda th, ph: np.exp(-distancia_angular(th, ph, lat, lon) / s), f"bulto({lat},{lon})")
-    return Pieza(lambda th, ph: np.exp(-distancia_angular(th, ph, lat, lon) ** 2 / (2 * s**2)),
-                 f"bulto({lat},{lon})")
+        return Pieza(
+            lambda th, ph: np.exp(-distancia_angular(th, ph, lat, lon) / s),
+            f"bulto({lat},{lon})",
+        )
+    return Pieza(
+        lambda th, ph: np.exp(-(distancia_angular(th, ph, lat, lon) ** 2) / (2 * s**2)),
+        f"bulto({lat},{lon})",
+    )
 
 
 def hoyo(lat, lon=0.0, ancho=30.0, punta=False):
@@ -100,20 +108,30 @@ def crater(lat, lon=0.0, ancho=18.0, borde=0.35, radio_borde=None):
 
     def f(th, ph):
         g = distancia_angular(th, ph, lat, lon)
-        return -np.exp(-g**2 / (2 * s**2)) + borde * np.exp(-(g - r0) ** 2 / (2 * w**2))
+        return -np.exp(-(g**2) / (2 * s**2)) + borde * np.exp(
+            -((g - r0) ** 2) / (2 * w**2)
+        )
 
     return Pieza(f, f"crater({lat},{lon})")
 
 
 def banda(lat, ancho=20.0):
     s = R(ancho)
-    return Pieza(lambda th, ph: np.exp(-((np.pi / 2 - th) - R(lat)) ** 2 / (2 * s**2)), f"banda({lat})")
+    return Pieza(
+        lambda th, ph: np.exp(-(((np.pi / 2 - th) - R(lat)) ** 2) / (2 * s**2)),
+        f"banda({lat})",
+    )
 
 
 def lobulos(m, lat=0.0, ancho=40.0, fase=0.0):
     s = R(ancho)
-    return Pieza(lambda th, ph: np.exp(-((np.pi / 2 - th) - R(lat)) ** 2 / (2 * s**2))
-                 * np.cos(m * (ph - R(fase))), f"lobulos({m})")
+    return Pieza(
+        lambda th, ph: (
+            np.exp(-(((np.pi / 2 - th) - R(lat)) ** 2) / (2 * s**2))
+            * np.cos(m * (ph - R(fase)))
+        ),
+        f"lobulos({m})",
+    )
 
 
 def espiral(m, k=1.0, lat=0.0, ancho=40.0):
@@ -122,7 +140,7 @@ def espiral(m, k=1.0, lat=0.0, ancho=40.0):
 
     def f(th, ph):
         la = np.pi / 2 - th
-        return np.exp(-(la - R(lat)) ** 2 / (2 * s**2)) * np.cos(m * (ph - k * la))
+        return np.exp(-((la - R(lat)) ** 2) / (2 * s**2)) * np.cos(m * (ph - k * la))
 
     return Pieza(f, f"espiral({m},{k})")
 
@@ -146,22 +164,31 @@ def simetrias(C, S) -> list[str]:
     filas = A.coeficientes_no_nulos(C, S)
     terminos = [(n, m) for n, m, _, _ in filas if (n, m) != (0, 0)]
     ms = sorted({m for _, m in terminos})
-    salida = [f"órdenes m presentes: {ms}", f"grados n presentes: {sorted({n for n, _ in terminos})}"]
+    salida = [
+        f"órdenes m presentes: {ms}",
+        f"grados n presentes: {sorted({n for n, _ in terminos})}",
+    ]
     if ms == [0]:
         salida.append("solo m = 0: simetría de revolución alrededor del eje z")
     else:
         positivos = [m for m in ms if m > 0]
         k = min(positivos) if positivos else 0
         if k > 1 and all(m % k == 0 for m in ms):
-            salida.append(f"m múltiplos de {k}: invariante bajo giros de 360°/{k} = {360 // k}° en torno a z")
+            salida.append(
+                f"m múltiplos de {k}: invariante bajo giros de 360°/{k} = {360 // k}° en torno a z"
+            )
     if all(abs(s) < 1e-12 for _, m, _, s in filas if m > 0):
         salida.append("todos los S_nm = 0: simétrica respecto al plano φ = 0 (φ -> -φ)")
     if terminos and all((n + m) % 2 == 0 for n, m in terminos):
-        salida.append("solo n + m par: simétrica respecto al ecuador (z -> -z), pues P_nm(-x) = (-1)^(n+m) P_nm(x)")
+        salida.append(
+            "solo n + m par: simétrica respecto al ecuador (z -> -z), pues P_nm(-x) = (-1)^(n+m) P_nm(x)"
+        )
     return salida
 
 
-def construir(nombre, forma, q=1.5, vistas=None, umbral=0.01, carpeta: Path | None = None):
+def construir(
+    nombre, forma, q=1.5, vistas=None, umbral=0.01, carpeta: Path | None = None
+):
     """Forma -> coeficientes -> .dat y figura. Devuelve (C, S)."""
     vistas = vistas or A.VISTAS_POR_DEFECTO
     carpeta = Path(carpeta) if carpeta else A.RESULTADOS
@@ -178,13 +205,24 @@ def construir(nombre, forma, q=1.5, vistas=None, umbral=0.01, carpeta: Path | No
 
     r_min, r_max = A.radios_script(C, S)
     print(f"\n=== {nombre} ===")
-    print(f"fracción no representable con n <= 6: {100 * err_trunc:.0f} %"
-          + ("  (aviso: piezas demasiado estrechas para grado 6)" if err_trunc > 0.35 else ""))
+    print(
+        f"fracción no representable con n <= 6: {100 * err_trunc:.0f} %"
+        + (
+            "  (aviso: piezas demasiado estrechas para grado 6)"
+            if err_trunc > 0.35
+            else ""
+        )
+    )
     print(f"error introducido al redondear: {100 * err_red:.2f} %")
-    print(f"radio en spheriharm1.py: mínimo {r_min:.2f}, máximo {r_max:.2f}"
-          + ("  (aviso: relieve insuficiente, aumentar q)" if r_min > 0.95 else ""))
+    print(
+        f"radio en spheriharm1.py: mínimo {r_min:.2f}, máximo {r_max:.2f}"
+        + ("  (aviso: relieve insuficiente, aumentar q)" if r_min > 0.95 else "")
+    )
     for linea in simetrias(C, S):
         print("  ·", linea)
     A.imprimir_coeficientes(C, S)
-    print("->", ruta_dat.relative_to(A.RAIZ) if ruta_dat.is_relative_to(A.RAIZ) else ruta_dat)
+    print(
+        "->",
+        ruta_dat.relative_to(A.RAIZ) if ruta_dat.is_relative_to(A.RAIZ) else ruta_dat,
+    )
     return C, S
