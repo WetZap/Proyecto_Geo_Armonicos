@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Salidas temporales o personales
+*_ajustado.dat
+resultados/exploracion/*.dat
+resultados/dats/mi_forma.dat
+resultados/figuras/mi_forma.png
+Imagenes/
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
